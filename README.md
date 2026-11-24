@@ -22,8 +22,10 @@ ningún Namespace, ningún Secret, nada de ámbito de clúster. El namespace lo 
 
 **El namespace.** Los objetos no llevan ninguno: en Flux, `spec.targetNamespace`.
 
-**Las imágenes.** Las de Synapse y la del broker no son públicas. El árbol las nombra con un registro de relleno,
-`registro.invalid/…`, que no resuelve; `imagenes.txt` lista cada una con su digest. Quien instala las copia a su
+**Las imágenes.** La de Synapse y la del broker no son públicas. La de Synapse es `synapse-core`: solo el núcleo
+(gateway, motor, dispatcher, migrador y el plugin de la compañía), sin el código ni los flujos de ninguna otra
+instalación. El árbol las nombra con un registro de relleno, `registro.invalid/…`, que no resuelve; `imagenes.txt`
+lista cada una con su digest. Quien instala las copia a su
 registro y las apunta ahí conservando el digest (en Flux, `spec.images` con `name` y `newName`). El broker tiene que
 ser el de `imagenes.txt` o uno equivalente con el plugin de mensajes retardados: el RabbitMQ oficial no lo trae.
 
@@ -71,7 +73,7 @@ spec:
   targetNamespace: synapse
   prune: true
   images:
-    - {name: registro.invalid/synapse, newName: <tu registro>/synapse}
+    - {name: registro.invalid/synapse-core, newName: <tu registro>/synapse-core}
   postBuild:
     substitute:
       synapse_supervisor_url: http://company:19911
@@ -90,7 +92,7 @@ namespace: synapse
 resources:
   - https://github.com/pocharlies-org/synapse-installer//esqueleto?ref=<tag>
 images:
-  - {name: registro.invalid/synapse, newName: <tu registro>/synapse}
+  - {name: registro.invalid/synapse-core, newName: <tu registro>/synapse-core}
 configMapGenerator:
   - name: synapse-config
     behavior: merge          # tus ficheros sustituyen enteros a los del árbol

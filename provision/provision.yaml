@@ -185,7 +185,7 @@ spec:
         - -c
         - cp /app/scripts/k8s/provision-postgres-synapse.sql /work/ && cp -r /app/migrations
           /work/migrations
-        image: registro.invalid/synapse@sha256:28694afa4c8049267885330085e047286d3ee4a4d79b1cce153456d98fe55dfa
+        image: registro.invalid/synapse-core@sha256:e7cc09a4c7bf042d9dfc9cb5b973c28fd63362f0f31e71ba593914e29e6f6661
         name: copiar
         securityContext:
           allowPrivilegeEscalation: false
@@ -203,7 +203,7 @@ spec:
           value: http://${synapse_rmq_host:=synapse-rmq}:15672
         - name: RABBITMQ_ADMIN_USER
           value: synapse_provision
-        image: registro.invalid/synapse@sha256:28694afa4c8049267885330085e047286d3ee4a4d79b1cce153456d98fe55dfa
+        image: registro.invalid/synapse-core@sha256:e7cc09a4c7bf042d9dfc9cb5b973c28fd63362f0f31e71ba593914e29e6f6661
         name: rabbitmq
         securityContext:
           allowPrivilegeEscalation: false
