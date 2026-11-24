@@ -1,0 +1,639 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/name: synapse
+    app.kubernetes.io/part-of: synapse
+  name: synapse
+---
+apiVersion: v1
+data:
+  adapter-supervisor.yaml: "service: synapse-adapter-supervisor\ndatabase:\n  dsn:\
+    \ postgresql://synapse_adapter@${synapse_pg_host:=synapse-pg}:5432/synapse\nrabbitmq:\n\
+    \  url: amqp://synapse_adapter_supervisor@${synapse_rmq_host:=synapse-rmq}:5672/%2Fsynapse\n\
+    supervisor:\n  base_url: ${synapse_supervisor_url}\nmetrics:\n  host: 0.0.0.0\n\
+    \  port: 9148\nlogging:\n  level: INFO\n  format: json\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/part-of: synapse
+  name: adapter-supervisor-config-checksum-m6456hbkgt
+---
+apiVersion: v1
+data:
+  adapter-supervisor.yaml: "service: synapse-adapter-supervisor\ndatabase:\n  dsn:\
+    \ postgresql://synapse_adapter@${synapse_pg_host:=synapse-pg}:5432/synapse\nrabbitmq:\n\
+    \  url: amqp://synapse_adapter_supervisor@${synapse_rmq_host:=synapse-rmq}:5672/%2Fsynapse\n\
+    supervisor:\n  base_url: ${synapse_supervisor_url}\nmetrics:\n  host: 0.0.0.0\n\
+    \  port: 9148\nlogging:\n  level: INFO\n  format: json\n"
+  dispatcher.yaml: "service: synapse-dispatcher\nmetrics:\n  host: 0.0.0.0\n  port:\
+    \ 9102\ndatabase:\n  dsn: postgresql://synapse_dispatcher@${synapse_pg_host:=synapse-pg}:5432/synapse\n\
+    \  min_size: 2\n  max_size: 8\nrabbitmq:\n  url: amqp://synapse_dispatcher@${synapse_rmq_host:=synapse-rmq}:5672/%2Fsynapse\n\
+    \  publisher_confirms: true\ndispatch:\n  poll_interval_ms: 250\n  batch_size:\
+    \ 100\n  retry_max_attempts: 5\n  retry_backoff_initial_ms: 60000\n  retry_backoff_max_ms:\
+    \ 900000\n  requeue_backoff_s: 300\nlogging:\n  level: WARNING\n  format: json\n"
+  engine.yaml: "service: synapse-engine\ndatabase:\n  dsn: postgresql://synapse_engine@${synapse_pg_host:=synapse-pg}:5432/synapse\n\
+    \  min_size: 2\n  max_size: 8\nrabbitmq:\n  url: amqp://synapse_engine@${synapse_rmq_host:=synapse-rmq}:5672/%2Fsynapse\n\
+    \  management_url: http://${synapse_rmq_host:=synapse-rmq}:15672\nworkflows:\n\
+    \  root: /srv/synapse/workflows\nmetrics:\n  host: 0.0.0.0\n  port: 9103\nlogging:\n\
+    \  level: WARNING\n  format: json\ntimeout_reaper_interval_ms: 10000\n"
+  gateway.yaml: "service: synapse-gateway\nhttp:\n  host: 0.0.0.0\n  port: 18790\n\
+    metrics:\n  host: 0.0.0.0\n  port: 9101\ndatabase:\n  dsn: postgresql://synapse_gateway@${synapse_pg_host:=synapse-pg}:5432/synapse\n\
+    \  min_size: 4\n  max_size: 16\nrabbitmq:\n  url: amqp://synapse_gateway@${synapse_rmq_host:=synapse-rmq}:5672/%2Fsynapse\n\
+    logging:\n  level: INFO\n  format: json\nwebhooks:\n  shopify:\n    hmac_credential:\
+    \ shopify.hmac.secret\n    hmac_header: X-Shopify-Hmac-Sha256\n    hmac_encoding:\
+    \ base64\n  gmail:\n    hmac_credential: gmail.webhook.token\n    hmac_header:\
+    \ X-Synapse-Gmail-Token\n    hmac_encoding: base64\n  stripe:\n    hmac_credential:\
+    \ stripe.hmac.secret\n    hmac_header: Stripe-Signature\n    hmac_encoding: hex\n\
+    \  telegram:\n    hmac_credential: telegram.webhook.secret\n    hmac_header: X-Telegram-Bot-Api-Secret-Token\n\
+    \    hmac_encoding: base64\n  github_actions:\n    hmac_credential: github-actions.webhook.token\n\
+    \    hmac_header: X-Synapse-GitHub-Token\n    hmac_encoding: base64\neventos:\n\
+    \  producers:\n    paseo:\n      hmac_credential: eventos.paseo.webhook.secret\n\
+    \      routing_keys:\n      - eventos.paseo.stop\n      - eventos.paseo.trozo\n\
+    \      - eventos.paseo.turno\n      - eventos.paseo.pregunta\n      - eventos.paseo.permiso\n\
+    \      - eventos.paseo.estado\n    correo:\n      hmac_credential: eventos.correo.webhook.secret\n\
+    \      routing_keys:\n      - eventos.hermes.wake\n    whatsapp-voice:\n     \
+    \ hmac_credential: whatsapp.webhook.secret\n      routing_keys:\n      - eventos.whatsapp.voice.pending\n\
+    \    keep:\n      hmac_credential: eventos.keep.webhook.secret\n      routing_keys:\n\
+    \      - eventos.keep.incidente\n      - eventos.keep.resuelto\n    aurora:\n\
+    \      hmac_credential: eventos.aurora.webhook.secret\n      routing_keys:\n \
+    \     - eventos.aurora.rca\n    sdk-runner:\n      hmac_credential: eventos.sdk-runner.webhook.secret\n\
+    \      routing_keys:\n      - eventos.sdk-runner.turno\n      - eventos.sdk-runner.trozo\n\
+    \      - eventos.sdk-runner.pregunta\n      - eventos.sdk-runner.permiso\n   \
+    \   - eventos.sdk-runner.estado\n    claude-cli:\n      hmac_credential: eventos.claude-cli.webhook.secret\n\
+    \      routing_keys:\n      - eventos.claude-cli.turno\n      - eventos.claude-cli.trozo\n\
+    \      - eventos.claude-cli.pregunta\n      - eventos.claude-cli.permiso\n   \
+    \   - eventos.claude-cli.estado\n    canal-telegram:\n      hmac_credential: eventos.canal-telegram.webhook.secret\n\
+    \      routing_keys:\n      - canal.casa.recibido\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/part-of: synapse
+  name: synapse-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: synapse-gateway
+    app.kubernetes.io/part-of: synapse
+    synapse.e-dani.com/metrics: 'true'
+  name: synapse-gateway
+spec:
+  ports:
+  - name: http
+    port: 18790
+    targetPort: 18790
+  - name: metrics
+    port: 9101
+    targetPort: 9101
+  selector:
+    app.kubernetes.io/name: synapse-gateway
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: synapse-adapter-supervisor
+    app.kubernetes.io/part-of: synapse
+    synapse.e-dani.com/family: supervisor
+    synapse.e-dani.com/hardened: full
+  name: synapse-adapter-supervisor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: synapse-adapter-supervisor
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: synapse-adapter-supervisor
+        app.kubernetes.io/part-of: synapse
+        synapse.e-dani.com/family: supervisor
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - python
+        - -m
+        - synapse_adapter_supervisor
+        env:
+        - name: CREDENTIALS_DIRECTORY
+          value: /etc/synapse/credentials
+        - name: PYTHONUNBUFFERED
+          value: '1'
+        - name: SYNAPSE_SERVICE
+          value: adapter-supervisor
+        - name: HOME
+          value: /tmp
+        image: registro.invalid/synapse@sha256:f95c3ed528ac1edd0cdb61ccf90f06fbffee50d402288bf299b47a080b415dfd
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 9148
+          periodSeconds: 20
+          timeoutSeconds: 3
+        name: adapter-supervisor
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: 9148
+          periodSeconds: 15
+          timeoutSeconds: 5
+        resources:
+          limits:
+            memory: 384Mi
+          requests:
+            cpu: 20m
+            memory: 96Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 36
+          httpGet:
+            path: /healthz
+            port: 9148
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /etc/synapse
+          name: config
+          readOnly: true
+        - mountPath: /etc/synapse/credentials
+          name: credentials
+          readOnly: true
+        - mountPath: /tmp
+          name: tmp
+      enableServiceLinks: false
+      imagePullSecrets:
+      - name: harbor-pull
+      securityContext:
+        fsGroup: 10008
+        runAsGroup: 10008
+        runAsNonRoot: true
+        runAsUser: 10008
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: synapse
+      volumes:
+      - configMap:
+          name: synapse-config
+        name: config
+      - configMap:
+          name: adapter-supervisor-config-checksum-m6456hbkgt
+        name: config-checksum
+      - name: credentials
+        projected:
+          sources:
+          - secret:
+              name: synapse-secrets
+          - secret:
+              name: synapse-adapter-supervisor
+              optional: true
+          - secret:
+              name: synapse-adapter-supervisor-arreglar
+              optional: true
+      - emptyDir:
+          sizeLimit: 128Mi
+        name: tmp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: synapse-dispatcher
+    app.kubernetes.io/part-of: synapse
+    synapse.e-dani.com/family: core
+    synapse.e-dani.com/hardened: full
+  name: synapse-dispatcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: synapse-dispatcher
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: synapse-dispatcher
+        app.kubernetes.io/part-of: synapse
+        synapse.e-dani.com/family: core
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - python
+        - -m
+        - synapse_dispatcher
+        env:
+        - name: CREDENTIALS_DIRECTORY
+          value: /etc/synapse/credentials
+        - name: PYTHONUNBUFFERED
+          value: '1'
+        - name: SYNAPSE_SERVICE
+          value: dispatcher
+        - name: HOME
+          value: /tmp
+        image: registro.invalid/synapse@sha256:a352330c506953cb81bea822d67620afdf7e0d59794229687cfa548f16347630
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 9102
+          periodSeconds: 20
+          timeoutSeconds: 3
+        name: dispatcher
+        ports:
+        - containerPort: 9102
+          name: metrics
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: 9102
+          periodSeconds: 15
+          timeoutSeconds: 5
+        resources:
+          limits:
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 36
+          httpGet:
+            path: /healthz
+            port: 9102
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /etc/synapse
+          name: config
+          readOnly: true
+        - mountPath: /etc/synapse/credentials
+          name: credentials
+          readOnly: true
+        - mountPath: /tmp
+          name: tmp
+      enableServiceLinks: false
+      imagePullSecrets:
+      - name: harbor-pull
+      securityContext:
+        fsGroup: 10008
+        runAsGroup: 10008
+        runAsNonRoot: true
+        runAsUser: 10008
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: synapse
+      volumes:
+      - configMap:
+          name: synapse-config
+        name: config
+      - name: credentials
+        secret:
+          secretName: synapse-secrets
+      - emptyDir:
+          sizeLimit: 128Mi
+        name: tmp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: synapse-engine
+    app.kubernetes.io/part-of: synapse
+    synapse.e-dani.com/family: core
+    synapse.e-dani.com/hardened: full
+  name: synapse-engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: synapse-engine
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: engine
+      labels:
+        app.kubernetes.io/name: synapse-engine
+        app.kubernetes.io/part-of: synapse
+        synapse.e-dani.com/family: core
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - python
+        - -m
+        - synapse_engine
+        env:
+        - name: CREDENTIALS_DIRECTORY
+          value: /etc/synapse/credentials
+        - name: PYTHONUNBUFFERED
+          value: '1'
+        - name: SYNAPSE_SERVICE
+          value: engine
+        - name: HOME
+          value: /tmp
+        image: registro.invalid/synapse@sha256:c5e34337e0c0d05198819b0bfda602b0f3d5edb7e1e9d752eb3ca5642c2f31e0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 9103
+          periodSeconds: 20
+          timeoutSeconds: 3
+        name: engine
+        ports:
+        - containerPort: 9103
+          name: metrics
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: 9103
+          periodSeconds: 15
+          timeoutSeconds: 5
+        resources:
+          limits:
+            memory: 2Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        startupProbe:
+          failureThreshold: 36
+          httpGet:
+            path: /healthz
+            port: 9103
+          periodSeconds: 10
+        volumeMounts:
+        - mountPath: /srv/synapse/workflows
+          name: flujos
+          readOnly: true
+        - mountPath: /etc/synapse
+          name: config
+          readOnly: true
+        - mountPath: /etc/synapse/credentials
+          name: credentials
+          readOnly: true
+        - mountPath: /tmp
+          name: tmp
+      enableServiceLinks: false
+      imagePullSecrets:
+      - name: harbor-pull
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - mkdir -p /flujos/supervisor && cp -r /app/workflows/company/supervisor/.
+          /flujos/supervisor/
+        image: registro.invalid/synapse@sha256:f95c3ed528ac1edd0cdb61ccf90f06fbffee50d402288bf299b47a080b415dfd
+        name: flujos-supervisor
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /flujos
+          name: flujos
+      securityContext:
+        fsGroup: 10008
+        runAsGroup: 10008
+        runAsNonRoot: true
+        runAsUser: 10008
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: synapse
+      volumes:
+      - emptyDir: {}
+        name: flujos
+      - configMap:
+          name: synapse-config
+        name: config
+      - name: credentials
+        secret:
+          secretName: synapse-secrets
+      - emptyDir:
+          sizeLimit: 128Mi
+        name: tmp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: synapse-gateway
+    app.kubernetes.io/part-of: synapse
+    synapse.e-dani.com/family: core
+    synapse.e-dani.com/hardened: full
+  name: synapse-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: synapse-gateway
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        synapse.e-dani.com/credentials-generation: eventos-keep-aurora-v1
+      labels:
+        app.kubernetes.io/name: synapse-gateway
+        app.kubernetes.io/part-of: synapse
+        synapse.e-dani.com/family: core
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - python
+        - -m
+        - synapse_gateway
+        env:
+        - name: CREDENTIALS_DIRECTORY
+          value: /etc/synapse/credentials
+        - name: PYTHONUNBUFFERED
+          value: '1'
+        - name: SYNAPSE_SERVICE
+          value: gateway
+        - name: HOME
+          value: /tmp
+        image: registro.invalid/synapse@sha256:3f86f56b47815430e66bfeb05d0f62bf591bc752d589b36650ffcdcacd54c49a
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: http
+          initialDelaySeconds: 20
+          periodSeconds: 20
+        name: gateway
+        ports:
+        - containerPort: 18790
+          name: http
+        - containerPort: 9101
+          name: metrics
+        readinessProbe:
+          httpGet:
+            path: /health/readiness
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        resources:
+          limits:
+            memory: 1Gi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /etc/synapse
+          name: config
+          readOnly: true
+        - mountPath: /etc/synapse/credentials
+          name: credentials
+          readOnly: true
+        - mountPath: /tmp
+          name: tmp
+      enableServiceLinks: false
+      imagePullSecrets:
+      - name: harbor-pull
+      securityContext:
+        fsGroup: 10008
+        runAsGroup: 10008
+        runAsNonRoot: true
+        runAsUser: 10008
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: synapse
+      topologySpreadConstraints:
+      - labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: synapse-gateway
+        maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+      volumes:
+      - configMap:
+          name: synapse-config
+        name: config
+      - name: credentials
+        projected:
+          sources:
+          - secret:
+              name: synapse-secrets
+          - secret:
+              name: synapse-gateway-webhooks
+              optional: true
+      - emptyDir:
+          sizeLimit: 128Mi
+        name: tmp
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app.kubernetes.io/name: synapse-migrate
+    app.kubernetes.io/part-of: synapse
+  name: synapse-schema-migrate
+spec:
+  activeDeadlineSeconds: 900
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: synapse-migrate
+        app.kubernetes.io/part-of: synapse
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - args:
+        - --apply
+        - --migrations-dir
+        - /app/migrations
+        command:
+        - /app/.venv/bin/python3
+        - -m
+        - synapse_shared.migrations
+        env:
+        - name: HOME
+          value: /tmp
+        - name: PYTHONDONTWRITEBYTECODE
+          value: '1'
+        - name: SYNAPSE_POSTGRES_HOST
+          value: ${synapse_pg_host:=synapse-pg}
+        - name: SYNAPSE_POSTGRES_PORT
+          value: '5432'
+        image: registro.invalid/synapse@sha256:28694afa4c8049267885330085e047286d3ee4a4d79b1cce153456d98fe55dfa
+        imagePullPolicy: IfNotPresent
+        name: migrate
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /etc/synapse/credentials
+          name: credentials
+          readOnly: true
+        - mountPath: /tmp
+          name: tmp
+      enableServiceLinks: false
+      imagePullSecrets:
+      - name: harbor-pull
+      restartPolicy: Never
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+      - name: credentials
+        secret:
+          secretName: synapse-secrets
+      - emptyDir:
+          sizeLimit: 16Mi
+        name: tmp

@@ -1,0 +1,243 @@
+apiVersion: v1
+data:
+  atlas.sql: "-- La marca de Atlas, emulada. El migrador de k8s, con su ledger vacío,\
+    \ solo sabe continuar desde el historial de Atlas\n-- (`_bootstrap_from_atlas`):\
+    \ lee estas tres columnas, toma la versión más alta y da por aplicadas las anteriores.\n\
+    CREATE SCHEMA IF NOT EXISTS atlas_schema_revisions;\nCREATE TABLE IF NOT EXISTS\
+    \ atlas_schema_revisions.atlas_schema_revisions (\n  version     varchar PRIMARY\
+    \ KEY,\n  description varchar NOT NULL,\n  error       text\n);\nGRANT USAGE ON\
+    \ SCHEMA atlas_schema_revisions TO synapse_owner;\nGRANT SELECT ON atlas_schema_revisions.atlas_schema_revisions\
+    \ TO synapse_owner;\n"
+  canonico.sql: '-- Las nueve contraseñas que exige el SQL canónico, leídas de fichero
+    para que no pasen por la línea de órdenes. Las
+
+    -- seis que usa el esqueleto salen de `synapse-secrets`; las de los tres roles
+    que no usa son aleatorias y no se guardan.
+
+    \set synapse_gateway_password `cat /etc/synapse/credentials/synapse_gateway.password`
+
+    \set synapse_dispatcher_password `cat /etc/synapse/credentials/synapse_dispatcher.password`
+
+    \set synapse_engine_password `cat /etc/synapse/credentials/synapse_engine.password`
+
+    \set synapse_adapter_password `cat /etc/synapse/credentials/synapse_adapter.password`
+
+    \set synapse_admin_password `cat /etc/synapse/credentials/synapse_admin.password`
+
+    \set synapse_migration_password `cat /etc/synapse/credentials/synapse_migration.password`
+
+    \set synapse_outbox_gc_password `head -c 24 /dev/urandom | base64`
+
+    \set synapse_sre_m2m_password `head -c 24 /dev/urandom | base64`
+
+    \set synapse_sre_reporter_password `head -c 24 /dev/urandom | base64`
+
+    \i /work/provision-postgres-synapse.sql
+
+    '
+  provision.sh: "#!/usr/bin/env bash\n# Postgres de una instalación desde cero (SKIRM-529).\
+    \ Se puede repetir: cada paso mira antes lo que ya hay.\nset -euo pipefail\n\n\
+    CRED=/etc/synapse/credentials\nfor f in gateway dispatcher engine adapter admin\
+    \ migration; do\n  [ -s \"$CRED/synapse_$f.password\" ] || { echo \"falta $CRED/synapse_$f.password\
+    \ (Secret synapse-secrets)\" >&2; exit 2; }\ndone\nexport PGHOST=\"$SYNAPSE_POSTGRES_HOST\"\
+    \ PGPORT=\"$SYNAPSE_POSTGRES_PORT\" PGUSER=postgres\nPGPASSWORD=\"$(cat /etc/synapse/provision/postgres_superuser.password)\"\
+    \nexport PGPASSWORD\nsql() { psql -X -q -v ON_ERROR_STOP=1 \"$@\"; }\n\n# 1. Los\
+    \ roles y la base, con el dueño que tiene en producción.\nsql -d postgres -f /provision/roles.sql\n\
+    # `synapse_admin` no sale de aquí con superusuario: si una pasada anterior murió\
+    \ a mitad del paso 3 sin llegar a\n# quitárselo (el trap no corre con un SIGKILL),\
+    \ se le quita ahora, entre o no esta pasada en ese paso.\nsql -d postgres -c \"\
+    ALTER ROLE synapse_admin NOSUPERUSER\"\n[ \"$(sql -d postgres -tAc \"SELECT 1\
+    \ FROM pg_database WHERE datname = 'synapse'\")\" = 1 ] \\\n  || sql -d postgres\
+    \ -c \"CREATE DATABASE synapse OWNER synapse_admin\"\n\n# 2. El SQL canónico de\
+    \ la imagen: contraseñas, esquema (a nombre de synapse_owner) y permisos.\nsql\
+    \ -d synapse -f /provision/canonico.sql\n\n# 3. La cadena histórica de migraciones.\
+    \ El migrador de k8s no sabe aplicarla: las primeras piden superusuario y en\n\
+    #    casa las importó de Atlas. Aquí se aplican como entonces, con `synapse_admin`\
+    \ de superusuario solo mientras dura;\n#    cada fichero deja su fila en la marca\
+    \ de Atlas dentro de su misma transacción, así que repetir el Job sigue donde\n\
+    #    se quedó. Si el migrador ya lleva la base (su ledger tiene filas), las migraciones\
+    \ son suyas y esto no las toca.\nif [ \"$(sql -d synapse -tAc \"SELECT to_regclass('synapse.schema_migrations')\
+    \ IS NOT NULL\")\" = t ] \\\n  && [ \"$(sql -d synapse -tAc \"SELECT count(*)\
+    \ FROM synapse.schema_migrations\")\" != 0 ]; then\n  echo \"el migrador ya lleva\
+    \ esta base: la cadena histórica no se toca\"\nelse\n  sql -d synapse -f /provision/atlas.sql\n\
+    \  trap 'sql -d postgres -c \"ALTER ROLE synapse_admin NOSUPERUSER\"' EXIT\n \
+    \ sql -d postgres -c \"ALTER ROLE synapse_admin SUPERUSER\"\n  hechas=\"$(sql\
+    \ -d synapse -tAc \"SELECT version FROM atlas_schema_revisions.atlas_schema_revisions\"\
+    )\"\n  nuevas=0\n  for f in /work/migrations/[0-9][0-9][0-9][0-9]_*.sql; do\n\
+    \    nombre=\"$(basename \"$f\" .sql)\"\n    [[ \"$nombre\" =~ ^[0-9]{4}_[A-Za-z0-9_]+$\
+    \ ]] || { echo \"nombre de migración inesperado: $nombre\" >&2; exit 2; }\n  \
+    \  grep -qx \"${nombre:0:4}\" <<<\"$hechas\" && continue\n    # La fila va delante\
+    \ del fichero: algunas migraciones traen su propio COMMIT y tiene que llevársela\
+    \ con él.\n    PGUSER=synapse_admin PGPASSWORD=\"$(cat \"$CRED/synapse_admin.password\"\
+    )\" sql -d synapse -1 \\\n      -c \"INSERT INTO atlas_schema_revisions.atlas_schema_revisions\
+    \ (version, description) VALUES ('${nombre:0:4}', '$nombre')\" \\\n      -f \"\
+    $f\"\n    nuevas=$((nuevas + 1))\n  done\n  sql -d postgres -c \"ALTER ROLE synapse_admin\
+    \ NOSUPERUSER\"\n  trap - EXIT\n  echo \"cadena histórica: $nuevas migraciones\
+    \ aplicadas ahora,\" \\\n    \"$(sql -d synapse -tAc \"SELECT count(*) FROM atlas_schema_revisions.atlas_schema_revisions\"\
+    ) en la marca de Atlas\"\nfi\n\n# 4. El SQL canónico otra vez: los permisos tienen\
+    \ que alcanzar a las tablas que la cadena acaba de crear.\nsql -d synapse -f /provision/canonico.sql\n\
+    echo \"provisión de Postgres hecha\"\n"
+  rabbitmq.py: "\"\"\"RabbitMQ de una instalación desde cero (SKIRM-529): el vhost,\
+    \ un usuario por servicio y el del supervisor, por la API de gestión.\n\nCorre\
+    \ en la imagen de Synapse, sin dependencias. Todo son PUT, así que se puede repetir.\
+    \ No declara exchanges ni colas:\nlos declaran los servicios al arrancar.\n\"\"\
+    \"\n\nimport base64\nimport json\nimport os\nimport urllib.request\nfrom pathlib\
+    \ import Path\nfrom urllib.parse import quote\n\nAPI = os.environ[\"SYNAPSE_RABBITMQ_API\"\
+    ].rstrip(\"/\")\nADMIN = f\"{os.environ['RABBITMQ_ADMIN_USER']}:{Path('/etc/synapse/provision/rabbitmq_admin.password').read_text().strip()}\"\
+    \nCRED = Path(\"/etc/synapse/credentials\")\nVHOST = quote(\"/synapse\", safe=\"\
+    \")\n# La etiqueta `management` deja usar la API de gestión: el motor lee por\
+    \ ella los bindings\n# (synapse_shared/topology_watch.py) y el supervisor de la\
+    \ compañía publica por ella sus eventos, con su propio usuario.\nUSUARIOS = {\n\
+    \    \"synapse_gateway\": \"\",\n    \"synapse_engine\": \"management\",\n   \
+    \ \"synapse_dispatcher\": \"\",\n    \"synapse_adapter_supervisor\": \"\",\n \
+    \   \"synapse_adapter_company\": \"management\",\n}\n\n\ndef put(ruta: str, cuerpo:\
+    \ dict) -> None:\n    cabeceras = {\"content-type\": \"application/json\", \"\
+    authorization\": \"Basic \" + base64.b64encode(ADMIN.encode()).decode()}\n   \
+    \ peticion = urllib.request.Request(f\"{API}/api/{ruta}\", data=json.dumps(cuerpo).encode(),\
+    \ method=\"PUT\", headers=cabeceras)\n    with urllib.request.urlopen(peticion,\
+    \ timeout=30):\n        pass\n\n\nput(f\"vhosts/{VHOST}\", {})\nfor usuario, etiquetas\
+    \ in USUARIOS.items():\n    put(f\"users/{usuario}\", {\"password\": (CRED / f\"\
+    {usuario}.rmq.password\").read_text().strip(), \"tags\": etiquetas})\n    put(f\"\
+    permissions/{VHOST}/{usuario}\", {\"configure\": \".*\", \"write\": \".*\", \"\
+    read\": \".*\"})\nprint(f\"provisión de RabbitMQ hecha: vhost /synapse y {len(USUARIOS)}\
+    \ usuarios\")\n"
+  roles.sql: "-- Los roles que en casa declara CloudNativePG (k8s-infra-pocharlies,\
+    \ `spec.managed.roles` del clúster de Postgres), con\n-- sus atributos y pertenencias:\
+    \ el SQL canónico los da por creados. Y dos de la era Docker que la cadena histórica\n\
+    -- nombra: `admin` (0001) y `webui` (0014). Sin contraseñas: las pone el SQL canónico.\n\
+    DO $$\nDECLARE r record;\nBEGIN\n  FOR r IN SELECT * FROM (VALUES\n    ('synapse_app',\
+    \ 'NOLOGIN'), ('synapse_owner', 'NOLOGIN'), ('admin', 'NOLOGIN'), ('webui', 'NOLOGIN'),\n\
+    \    ('synapse_gateway', 'LOGIN'), ('synapse_dispatcher', 'LOGIN'), ('synapse_adapter',\
+    \ 'LOGIN'),\n    ('synapse_outbox_gc', 'LOGIN'), ('synapse_migration', 'LOGIN'),\n\
+    \    ('synapse_engine', 'LOGIN BYPASSRLS'), ('synapse_admin', 'LOGIN BYPASSRLS'),\n\
+    \    ('synapse_sre_m2m', 'LOGIN NOINHERIT'), ('synapse_sre_reporter', 'LOGIN NOINHERIT'),\
+    \ ('synapse_agent_m2m', 'LOGIN NOINHERIT')\n  ) AS t(nombre, atributos) LOOP\n\
+    \    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r.nombre) THEN\n  \
+    \    EXECUTE format('CREATE ROLE %I %s', r.nombre, r.atributos);\n    END IF;\n\
+    \  END LOOP;\nEND\n$$;\nGRANT synapse_app TO synapse_gateway, synapse_dispatcher,\
+    \ synapse_engine, synapse_adapter, synapse_outbox_gc;\nGRANT synapse_owner TO\
+    \ synapse_migration, synapse_admin;\n"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/part-of: synapse
+  name: synapse-provision-scripts-t9mfd26kd2
+  annotations:
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app.kubernetes.io/name: synapse-provision
+    app.kubernetes.io/part-of: synapse
+  name: synapse-provision
+spec:
+  activeDeadlineSeconds: 1800
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: synapse-provision
+        app.kubernetes.io/part-of: synapse
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - command:
+        - bash
+        - /provision/provision.sh
+        env:
+        - name: SYNAPSE_POSTGRES_HOST
+          value: ${synapse_pg_host:=synapse-pg}
+        - name: SYNAPSE_POSTGRES_PORT
+          value: '5432'
+        image: postgres:17@sha256:223efeb196329b55b3b9a13db144956411dbc18e727e59f681c3e0aede6475cf
+        name: postgres
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - mountPath: /provision
+          name: scripts
+          readOnly: true
+        - mountPath: /work
+          name: work
+        - mountPath: /etc/synapse/credentials
+          name: credentials
+          readOnly: true
+        - mountPath: /etc/synapse/provision
+          name: admin
+          readOnly: true
+      enableServiceLinks: false
+      imagePullSecrets:
+      - name: harbor-pull
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - cp /app/scripts/k8s/provision-postgres-synapse.sql /work/ && cp -r /app/migrations
+          /work/migrations
+        image: registro.invalid/synapse@sha256:28694afa4c8049267885330085e047286d3ee4a4d79b1cce153456d98fe55dfa
+        name: copiar
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - mountPath: /work
+          name: work
+      - command:
+        - /app/.venv/bin/python3
+        - /provision/rabbitmq.py
+        env:
+        - name: SYNAPSE_RABBITMQ_API
+          value: http://${synapse_rmq_host:=synapse-rmq}:15672
+        - name: RABBITMQ_ADMIN_USER
+          value: synapse_provision
+        image: registro.invalid/synapse@sha256:28694afa4c8049267885330085e047286d3ee4a4d79b1cce153456d98fe55dfa
+        name: rabbitmq
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - mountPath: /provision
+          name: scripts
+          readOnly: true
+        - mountPath: /work
+          name: work
+        - mountPath: /etc/synapse/credentials
+          name: credentials
+          readOnly: true
+        - mountPath: /etc/synapse/provision
+          name: admin
+          readOnly: true
+      restartPolicy: Never
+      securityContext:
+        runAsGroup: 10008
+        runAsNonRoot: true
+        runAsUser: 10008
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+      - configMap:
+          name: synapse-provision-scripts-t9mfd26kd2
+        name: scripts
+      - emptyDir: {}
+        name: work
+      - name: credentials
+        secret:
+          secretName: synapse-secrets
+      - name: admin
+        secret:
+          secretName: synapse-provision
