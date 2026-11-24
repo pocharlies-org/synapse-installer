@@ -353,7 +353,7 @@ spec:
           value: engine
         - name: HOME
           value: /tmp
-        image: registro.invalid/synapse@sha256:c5e34337e0c0d05198819b0bfda602b0f3d5edb7e1e9d752eb3ca5642c2f31e0
+        image: registro.invalid/synapse@sha256:ce6476afc5f2adce78275c1fe069fa43fd86138171aa58eee4ea9f616d34ef17
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
