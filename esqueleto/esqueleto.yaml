@@ -17,7 +17,7 @@ kind: ConfigMap
 metadata:
   labels:
     app.kubernetes.io/part-of: synapse
-  name: adapter-supervisor-config-checksum-m6456hbkgt
+  name: adapter-supervisor-config-checksum-m5cm46ggkd
 ---
 apiVersion: v1
 data:
@@ -189,7 +189,7 @@ spec:
           name: synapse-config
         name: config
       - configMap:
-          name: adapter-supervisor-config-checksum-m6456hbkgt
+          name: adapter-supervisor-config-checksum-m5cm46ggkd
         name: config-checksum
       - name: credentials
         projected:

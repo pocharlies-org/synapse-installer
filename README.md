@@ -1,7 +1,8 @@
 # synapse-installer
 
 El esqueleto de [Synapse](#qué-instala) como árbol de kustomize que Flux puede leer. **Este repositorio es generado**:
-sale del esqueleto que corre en casa y nadie lo edita a mano; un cambio aquí se pierde en la siguiente publicación.
+sale de la fuente de la base, que es privada, y nadie lo edita a mano; un cambio aquí se pierde en la siguiente
+publicación. Cada versión es un tag, y un tag no se mueve: quien instala apunta a uno y sube al siguiente cuando quiere.
 
 ## Qué instala
 
@@ -78,6 +79,30 @@ spec:
 
 Una `Kustomization` por raíz, cada una con `dependsOn` de la anterior. Un Job no se puede reaplicar cambiado: para
 repetir la provisión o el migrador con otra imagen hay que borrar antes el Job.
+
+## Con kustomize o ArgoCD
+
+Sin el controlador de Flux nadie sustituye las variables: quien instala pone sus valores encima, con su propio
+`kustomization.yaml`.
+
+```yaml
+namespace: synapse
+resources:
+  - https://github.com/pocharlies-org/synapse-installer//esqueleto?ref=<tag>
+images:
+  - {name: registro.invalid/synapse, newName: <tu registro>/synapse}
+configMapGenerator:
+  - name: synapse-config
+    behavior: merge          # tus ficheros sustituyen enteros a los del árbol
+    options: {disableNameSuffixHash: true}
+    files: [gateway.yaml, engine.yaml, dispatcher.yaml, adapter-supervisor.yaml]
+```
+
+Las variables están en dos sitios, y los dos se pisan: los cuatro ficheros de `synapse-config` (copia los del árbol y
+escribe en ellos tus hosts) y las variables de entorno `SYNAPSE_POSTGRES_HOST` y `SYNAPSE_POSTGRES_PORT` del Job
+`synapse-schema-migrate`. El ConfigMap `adapter-supervisor-config-checksum-…` llega con el hash ya puesto: no cambia
+de nombre cuando cambias tu config, así que el plugin hay que reiniciarlo a mano o sustituir ese ConfigMap por uno
+generado por ti. Comprueba que en tu render no queda ningún `${synapse_` ni ningún `registro.invalid`.
 
 ## Sin Flux
 
