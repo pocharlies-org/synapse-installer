@@ -129,7 +129,7 @@ spec:
           value: adapter-supervisor
         - name: HOME
           value: /tmp
-        image: registro.invalid/synapse-core@sha256:e7cc09a4c7bf042d9dfc9cb5b973c28fd63362f0f31e71ba593914e29e6f6661
+        image: registro.invalid/synapse-core@sha256:1a893094e1b8380d57664cb46f7b28535ebd1fd119af82fd09161e6db3b26e22
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -244,7 +244,7 @@ spec:
           value: dispatcher
         - name: HOME
           value: /tmp
-        image: registro.invalid/synapse-core@sha256:e7cc09a4c7bf042d9dfc9cb5b973c28fd63362f0f31e71ba593914e29e6f6661
+        image: registro.invalid/synapse-core@sha256:1a893094e1b8380d57664cb46f7b28535ebd1fd119af82fd09161e6db3b26e22
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -353,7 +353,7 @@ spec:
           value: engine
         - name: HOME
           value: /tmp
-        image: registro.invalid/synapse-core@sha256:e7cc09a4c7bf042d9dfc9cb5b973c28fd63362f0f31e71ba593914e29e6f6661
+        image: registro.invalid/synapse-core@sha256:1a893094e1b8380d57664cb46f7b28535ebd1fd119af82fd09161e6db3b26e22
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3
@@ -412,7 +412,7 @@ spec:
         - -c
         - mkdir -p /flujos/supervisor && cp -r /app/workflows/company/supervisor/.
           /flujos/supervisor/
-        image: registro.invalid/synapse-core@sha256:e7cc09a4c7bf042d9dfc9cb5b973c28fd63362f0f31e71ba593914e29e6f6661
+        image: registro.invalid/synapse-core@sha256:1a893094e1b8380d57664cb46f7b28535ebd1fd119af82fd09161e6db3b26e22
         name: flujos-supervisor
         securityContext:
           allowPrivilegeEscalation: false
@@ -487,7 +487,7 @@ spec:
           value: gateway
         - name: HOME
           value: /tmp
-        image: registro.invalid/synapse-core@sha256:e7cc09a4c7bf042d9dfc9cb5b973c28fd63362f0f31e71ba593914e29e6f6661
+        image: registro.invalid/synapse-core@sha256:1a893094e1b8380d57664cb46f7b28535ebd1fd119af82fd09161e6db3b26e22
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -597,7 +597,7 @@ spec:
           value: ${synapse_pg_host:=synapse-pg}
         - name: SYNAPSE_POSTGRES_PORT
           value: '5432'
-        image: registro.invalid/synapse-core@sha256:e7cc09a4c7bf042d9dfc9cb5b973c28fd63362f0f31e71ba593914e29e6f6661
+        image: registro.invalid/synapse-core@sha256:1a893094e1b8380d57664cb46f7b28535ebd1fd119af82fd09161e6db3b26e22
         imagePullPolicy: IfNotPresent
         name: migrate
         resources:

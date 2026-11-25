@@ -18,6 +18,10 @@ necesita el supervisor de la compañía para funcionar, y ningún otro adapter. 
 Todo lo que renderizan son objetos del namespace (ConfigMap, Service, ServiceAccount, Deployment, StatefulSet, Job):
 ningún Namespace, ningún Secret, nada de ámbito de clúster. El namespace lo pone quien instala.
 
+La base de datos nace vacía. La cadena de migraciones crea el esquema y dos tenants de estructura sin perfil: `system`,
+para los eventos que no son de ningún tenant, y `company`, el del plugin de la compañía. Ningún otro tenant, ninguna
+persona, ninguna identidad y ninguna configuración: eso es de cada instalación y lo da de alta quien instala.
+
 ## Lo que pone quien instala
 
 **El namespace.** Los objetos no llevan ninguno: en Flux, `spec.targetNamespace`.
