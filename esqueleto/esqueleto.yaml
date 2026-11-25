@@ -174,8 +174,6 @@ spec:
         - mountPath: /tmp
           name: tmp
       enableServiceLinks: false
-      imagePullSecrets:
-      - name: harbor-pull
       securityContext:
         fsGroup: 10008
         runAsGroup: 10008
@@ -198,7 +196,7 @@ spec:
               name: synapse-secrets
           - secret:
               name: synapse-adapter-supervisor
-              optional: true
+              optional: false
           - secret:
               name: synapse-adapter-supervisor-arreglar
               optional: true
@@ -292,8 +290,6 @@ spec:
         - mountPath: /tmp
           name: tmp
       enableServiceLinks: false
-      imagePullSecrets:
-      - name: harbor-pull
       securityContext:
         fsGroup: 10008
         runAsGroup: 10008
@@ -404,8 +400,6 @@ spec:
         - mountPath: /tmp
           name: tmp
       enableServiceLinks: false
-      imagePullSecrets:
-      - name: harbor-pull
       initContainers:
       - command:
         - sh
@@ -529,8 +523,6 @@ spec:
         - mountPath: /tmp
           name: tmp
       enableServiceLinks: false
-      imagePullSecrets:
-      - name: harbor-pull
       securityContext:
         fsGroup: 10008
         runAsGroup: 10008
@@ -620,8 +612,6 @@ spec:
         - mountPath: /tmp
           name: tmp
       enableServiceLinks: false
-      imagePullSecrets:
-      - name: harbor-pull
       restartPolicy: Never
       securityContext:
         fsGroup: 1000

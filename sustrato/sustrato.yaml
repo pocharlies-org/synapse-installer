@@ -101,8 +101,6 @@ spec:
         - mountPath: /var/lib/postgresql/data
           name: data
       enableServiceLinks: false
-      imagePullSecrets:
-      - name: harbor-pull
       securityContext:
         fsGroup: 999
         runAsGroup: 999
@@ -183,8 +181,6 @@ spec:
           name: plugins
           subPath: enabled_plugins
       enableServiceLinks: false
-      imagePullSecrets:
-      - name: harbor-pull
       securityContext:
         fsGroup: 999
         runAsGroup: 999

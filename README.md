@@ -38,11 +38,16 @@ ser el de `imagenes.txt` o uno equivalente con el plugin de mensajes retardados:
 | Secret | ficheros | quién lo monta |
 |---|---|---|
 | `synapse-secrets` | `synapse_gateway.password`, `synapse_engine.password`, `synapse_dispatcher.password`, `synapse_adapter.password`, `synapse_admin.password`, `synapse_migration.password` (PostgreSQL) y `synapse_gateway.rmq.password`, `synapse_engine.rmq.password`, `synapse_dispatcher.rmq.password`, `synapse_adapter_supervisor.rmq.password`, `synapse_adapter_company.rmq.password` (RabbitMQ) | los servicios y la provisión |
-| `synapse-adapter-supervisor` | `company.supervisor.token` | el plugin de la compañía |
+| `synapse-adapter-supervisor` | `company.supervisor.token` | el plugin de la compañía; **obligatorio**: sin él el pod no arranca |
 | `synapse-provision` | `postgres_superuser.password`, `rabbitmq_admin.password` | solo la provisión y el sustrato |
-| `harbor-pull` (de pull) | — | todos; solo si el registro pide credenciales |
+| un secreto de pull, con el nombre que le pongas | — | **ninguno del árbol**: lo pones tú en tu overlay, y solo si tu registro pide credenciales |
 
 El valor de cada contraseña lo elige quien instala: la provisión crea los roles y los usuarios con esos valores.
+
+**El secreto de pull.** El árbol no nombra ninguno: quien instala no lo tiene y cada pod avisaría
+`FailedToRetrieveImagePullSecret`. Si tu registro pide credenciales, créalo y añade `imagePullSecrets` con su nombre a
+los cuatro Deployments, al Job `synapse-schema-migrate`, al Job `synapse-provision` y a los dos StatefulSet del
+sustrato, en tu overlay (en Flux, `spec.patches` de la Kustomization).
 
 **Las variables**, que Flux sustituye con `postBuild.substitute`:
 
@@ -84,7 +89,8 @@ spec:
 ```
 
 Una `Kustomization` por raíz, cada una con `dependsOn` de la anterior. Un Job no se puede reaplicar cambiado: para
-repetir la provisión o el migrador con otra imagen hay que borrar antes el Job.
+repetir la provisión o el migrador con otra imagen hay que borrar antes el Job. Repetirla sin cambiar nada es seguro:
+sigue donde se quedó, y si el migrador ya lleva la base no toca la cadena.
 
 ## Con kustomize o ArgoCD
 

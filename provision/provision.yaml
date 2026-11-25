@@ -177,8 +177,6 @@ spec:
           name: admin
           readOnly: true
       enableServiceLinks: false
-      imagePullSecrets:
-      - name: harbor-pull
       initContainers:
       - command:
         - sh
